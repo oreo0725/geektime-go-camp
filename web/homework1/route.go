@@ -82,38 +82,23 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 		return nil, false
 	}
 	pathTrimed := strings.Trim(path, "/")
-	var pathParams map[string]string
 	segs := strings.Split(pathTrimed, "/")
+
+	mi := &matchInfo{}
 	for _, seg := range segs {
 		if child, ok := root.childOf(seg); ok {
 			root = child
-			if root.typ == nodeTypeReg {
-				if root.regExpr.MatchString(seg) {
-					if pathParams == nil {
-						pathParams = make(map[string]string)
-					}
-					pathParams[root.paramName] = seg
-				} else {
-					return nil, false
-				}
-			} else if root.typ == nodeTypeParam {
-				if pathParams == nil {
-					pathParams = make(map[string]string)
-				}
-				pathParams[root.paramName] = seg
+			mi.n = root
+			if root.paramName != "" {
+				mi.addValue(root.paramName, seg)
 			}
-		} else if root.starChild != nil {
-			root = root.starChild
 		} else if root.typ == nodeTypeAny {
 			break
 		} else {
 			return nil, false
 		}
 	}
-	return &matchInfo{
-		n:          root,
-		pathParams: pathParams,
-	}, true
+	return mi, true
 }
 
 type nodeType int
@@ -158,8 +143,8 @@ type node struct {
 	regExpr  *regexp.Regexp
 }
 
-func (n *node) getNonStaticChild() (*node, bool) {
-	if n.regChild != nil {
+func (n *node) getNonStaticChild(path string) (*node, bool) {
+	if regexNode := n.regChild; regexNode != nil && regexNode.regExpr.MatchString(path) {
 		return n.regChild, true
 	}
 	if n.paramChild != nil {
@@ -176,11 +161,11 @@ func (n *node) getNonStaticChild() (*node, bool) {
 // 第二个返回值 bool 代表是否命中
 func (n *node) childOf(path string) (*node, bool) {
 	if n.children == nil {
-		return n.getNonStaticChild()
+		return n.getNonStaticChild(path)
 	}
 	child, ok := n.children[path]
 	if !ok {
-		return n.getNonStaticChild()
+		return n.getNonStaticChild(path)
 	}
 	return child, ok
 }
