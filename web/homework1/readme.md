@@ -1,9 +1,10 @@
 # Web framework #homework1
 
 ## TODO
-- [ ] `required` wildcard 比對  
-- [ ] `required` 正規表達式
+- [x] `required` wildcard 比對  
+- [x] `required` 正規表達式
 - [ ] `optional` Benchmark test for each _nodeType_
 
 ## Notes
+- 不太習慣在 code message 裡寫中文，所以改掉 `route_test.go` 中的判斷訊息 XD
 
