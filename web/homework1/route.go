@@ -176,7 +176,8 @@ func (n *node) childOf(path string) (*node, bool) {
 // 最后会从 children 里面查找，
 // 如果没有找到，那么会创建一个新的节点，并且保存在 node 里面
 func (n *node) childOrCreate(path string) *node {
-	if path[0] == ':' && strings.Index(path, "(") > 1 && strings.LastIndex(path, ")") == len(path)-1 {
+	switch {
+	case path[0] == ':' && strings.Index(path, "(") > 1 && strings.LastIndex(path, ")") == len(path)-1: // TODO regex path parameter: use regex the match
 		if n.starChild != nil {
 			panic(fmt.Sprintf("web: wildcard path is defined. not allow duplicated definition for the same path segment [%s]", path))
 		}
@@ -187,12 +188,12 @@ func (n *node) childOrCreate(path string) *node {
 			panic(fmt.Sprintf("web: duplicated define for regex path segement. defined: [%s], new: [%s]", n.regChild.regExpr.String(), path))
 		} else {
 			regexStartIdx, regexEndIdx := strings.Index(path, "(")+1, strings.LastIndex(path, ")")
-			regex := path[regexStartIdx:regexEndIdx]
-			n.regChild = &node{path: path, typ: nodeTypeReg, regExpr: regexp.MustCompile(regex), paramName: path[1 : regexStartIdx-1]}
+			paramRegex := path[regexStartIdx:regexEndIdx]
+			paramName := path[1 : regexStartIdx-1]
+			n.regChild = &node{path: path, typ: nodeTypeReg, regExpr: regexp.MustCompile(paramRegex), paramName: paramName}
 		}
 		return n.regChild
-	}
-	if path[0] == ':' {
+	case path[0] == ':': // TODO path parameter: use regex the match
 		if n.starChild != nil {
 			panic(fmt.Sprintf("web: wildcard path is defined. not allow duplicated definition for the same path segment [%s]", path))
 		}
@@ -207,8 +208,7 @@ func (n *node) childOrCreate(path string) *node {
 			n.paramChild = &node{path: path, typ: nodeTypeParam, paramName: path[1:]}
 		}
 		return n.paramChild
-	}
-	if path == "*" {
+	case path == "*": // wildcard
 		if n.paramChild != nil {
 			panic(fmt.Sprintf("web: path parameter is defined. not allow duplicated definition for the same path segment [%s]", path))
 		}
@@ -220,20 +220,21 @@ func (n *node) childOrCreate(path string) *node {
 			n.starChild = &node{path: "*", typ: nodeTypeAny}
 		}
 		return n.starChild
-	}
-	if n.children == nil {
-		n.children = map[string]*node{}
-	}
-	child, ok := n.children[path]
-	if !ok {
-		child = &node{
-			path: path,
-			typ:  nodeTypeStatic,
+	default: // find in children nodes
+		if n.children == nil {
+			n.children = map[string]*node{}
 		}
-		n.children[path] = child
+		child, ok := n.children[path]
+		if !ok {
+			child = &node{
+				path: path,
+				typ:  nodeTypeStatic,
+			}
+			n.children[path] = child
+		}
+		return child
 	}
 
-	return child
 }
 
 type matchInfo struct {
