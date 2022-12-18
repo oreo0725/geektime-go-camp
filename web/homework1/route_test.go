@@ -222,47 +222,47 @@ func Test_router_AddRoute(t *testing.T) {
 	})
 
 	// 同时注册通配符路由，参数路由，正则路由
-	assert.PanicsWithValue(t, "web: wildcard path is defined. only one of path parameter and wildcard can be defined [:id]", func() {
+	assert.PanicsWithValue(t, "web: wildcard path is defined. not allow duplicated definition for the same path segment [:id]", func() {
 		r.addRoute(http.MethodGet, "/a/*", mockHandler)
 		r.addRoute(http.MethodGet, "/a/:id", mockHandler)
 	})
 	r = newRouter()
-	assert.PanicsWithValue(t, "web: wildcard path is defined. only one of path parameter and wildcard can be defined [:id(.*)]", func() {
+	assert.PanicsWithValue(t, "web: wildcard path is defined. not allow duplicated definition for the same path segment [:id(.*)]", func() {
 		r.addRoute(http.MethodGet, "/a/b/*", mockHandler)
 		r.addRoute(http.MethodGet, "/a/b/:id(.*)", mockHandler)
 	})
 	r = newRouter()
-	assert.PanicsWithValue(t, "web: wildcard path is defined. only one of path parameter and wildcard can be defined [:id]", func() {
+	assert.PanicsWithValue(t, "web: wildcard path is defined. not allow duplicated definition for the same path segment [:id]", func() {
 		r.addRoute(http.MethodGet, "/*", mockHandler)
 		r.addRoute(http.MethodGet, "/:id", mockHandler)
 	})
 	r = newRouter()
-	assert.PanicsWithValue(t, "web: path parameter is defined. only one of path parameter and wildcard can be defined [*]", func() {
+	assert.PanicsWithValue(t, "web: path parameter is defined. not allow duplicated definition for the same path segment [*]", func() {
 		r.addRoute(http.MethodGet, "/a/b/:id", mockHandler)
 		r.addRoute(http.MethodGet, "/a/b/*", mockHandler)
 	})
 	r = newRouter()
-	assert.PanicsWithValue(t, "web: path parameter is defined. only one of path parameter and wildcard can be defined [*]", func() {
+	assert.PanicsWithValue(t, "web: path parameter is defined. not allow duplicated definition for the same path segment [*]", func() {
 		r.addRoute(http.MethodGet, "/:id", mockHandler)
 		r.addRoute(http.MethodGet, "/*", mockHandler)
 	})
 	r = newRouter()
-	assert.PanicsWithValue(t, "web: 非法路由，已有路径参数路由。不允许同时注册正则路由和参数路由 [:id(.*)]", func() {
+	assert.PanicsWithValue(t, "web: path parameter is defined. not allow duplicated definition for the same path segment [:id(.*)]", func() {
 		r.addRoute(http.MethodGet, "/a/b/:id", mockHandler)
 		r.addRoute(http.MethodGet, "/a/b/:id(.*)", mockHandler)
 	})
 	r = newRouter()
-	assert.PanicsWithValue(t, "web: 非法路由，已有正则路由。不允许同时注册通配符路由和正则路由 [*]", func() {
+	assert.PanicsWithValue(t, "web: regex parameter is defined. not allow duplicated definition for the same path segment [*]", func() {
 		r.addRoute(http.MethodGet, "/a/b/:id(.*)", mockHandler)
 		r.addRoute(http.MethodGet, "/a/b/*", mockHandler)
 	})
 	r = newRouter()
-	assert.PanicsWithValue(t, "web: 非法路由，已有正则路由。不允许同时注册正则路由和参数路由 [:id]", func() {
+	assert.PanicsWithValue(t, "web: regex path is defined. not allow duplicated definition for the same path segment [:id]", func() {
 		r.addRoute(http.MethodGet, "/a/b/:id(.*)", mockHandler)
 		r.addRoute(http.MethodGet, "/a/b/:id", mockHandler)
 	})
 	// 参数冲突
-	assert.PanicsWithValue(t, "web: 路由冲突，参数路由冲突，已有 :id，新注册 :name", func() {
+	assert.PanicsWithValue(t, "web: duplicated define for path parameter. defined: [:id], new: [:name]", func() {
 		r.addRoute(http.MethodGet, "/a/b/c/:id", mockHandler)
 		r.addRoute(http.MethodGet, "/a/b/c/:name", mockHandler)
 	})

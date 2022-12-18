@@ -87,11 +87,20 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 	for _, seg := range segs {
 		if child, ok := root.childOf(seg); ok {
 			root = child
-			if root.typ == nodeTypeParam {
+			if root.typ == nodeTypeReg {
+				if root.regExpr.MatchString(seg) {
+					if pathParams == nil {
+						pathParams = make(map[string]string)
+					}
+					pathParams[root.paramName] = seg
+				} else {
+					return nil, false
+				}
+			} else if root.typ == nodeTypeParam {
 				if pathParams == nil {
 					pathParams = make(map[string]string)
 				}
-				pathParams[root.path[1:]] = seg
+				pathParams[root.paramName] = seg
 			}
 		} else if root.starChild != nil {
 			root = root.starChild
@@ -178,27 +187,46 @@ func (n *node) childOf(path string) (*node, bool) {
 // 最后会从 children 里面查找，
 // 如果没有找到，那么会创建一个新的节点，并且保存在 node 里面
 func (n *node) childOrCreate(path string) *node {
+	if path[0] == ':' && strings.Index(path, "(") > 1 && strings.LastIndex(path, ")") == len(path)-1 {
+		if n.starChild != nil {
+			panic(fmt.Sprintf("web: wildcard path is defined. not allow duplicated definition for the same path segment [%s]", path))
+		}
+		if n.paramChild != nil {
+			panic(fmt.Sprintf("web: path parameter is defined. not allow duplicated definition for the same path segment [%s]", path))
+		}
+		if n.regChild != nil {
+			panic(fmt.Sprintf("web: duplicated define for regex path segement. defined: [%s], new: [%s]", n.regChild.regExpr.String(), path))
+		} else {
+			regexStartIdx, regexEndIdx := strings.Index(path, "(")+1, strings.LastIndex(path, ")")
+			regex := path[regexStartIdx:regexEndIdx]
+			n.regChild = &node{path: path, typ: nodeTypeReg, regExpr: regexp.MustCompile(regex), paramName: path[1 : regexStartIdx-1]}
+		}
+		return n.regChild
+	}
 	if path[0] == ':' {
 		if n.starChild != nil {
-			panic(fmt.Sprintf("web: wildcard path is defined. only one of path parameter and wildcard can be defined [%s]", path))
+			panic(fmt.Sprintf("web: wildcard path is defined. not allow duplicated definition for the same path segment [%s]", path))
 		}
-		//if n.paramChild != nil && n.paramChild.path != path {
-		//	panic(fmt.Sprintf("web: duplicated define for path parameter [%s]", path))
-		//}
-		//n.paramChild = &node{path: path, typ: nodeTypeParam}
+		if n.regChild != nil {
+			panic(fmt.Sprintf("web: regex path is defined. not allow duplicated definition for the same path segment [%s]", path))
+		}
 		if n.paramChild != nil {
 			if n.paramChild.path != path {
-				panic(fmt.Sprintf("web: duplicated define for path parameter [%s]", path))
+				panic(fmt.Sprintf("web: duplicated define for path parameter. defined: [%s], new: [%s]", n.paramChild.path, path))
 			}
 		} else {
-			n.paramChild = &node{path: path, typ: nodeTypeParam}
+			n.paramChild = &node{path: path, typ: nodeTypeParam, paramName: path[1:]}
 		}
 		return n.paramChild
 	}
 	if path == "*" {
 		if n.paramChild != nil {
-			panic(fmt.Sprintf("web: path parameter is defined. only one of path parameter and wildcard can be defined [%s]", path))
+			panic(fmt.Sprintf("web: path parameter is defined. not allow duplicated definition for the same path segment [%s]", path))
 		}
+		if n.regChild != nil {
+			panic(fmt.Sprintf("web: regex parameter is defined. not allow duplicated definition for the same path segment [%s]", path))
+		}
+
 		if n.starChild == nil {
 			n.starChild = &node{path: "*", typ: nodeTypeAny}
 		}
