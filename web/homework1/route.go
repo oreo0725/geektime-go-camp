@@ -93,9 +93,10 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 				}
 				pathParams[root.path[1:]] = seg
 			}
-
 		} else if root.starChild != nil {
 			root = root.starChild
+		} else if root.typ == nodeTypeAny {
+			break
 		} else {
 			return nil, false
 		}
