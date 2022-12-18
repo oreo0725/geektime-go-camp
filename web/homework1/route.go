@@ -81,10 +81,19 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 	if root.children == nil {
 		return nil, false
 	}
-	segs := strings.Split(path[1:], "/")
+	pathTrimed := strings.Trim(path, "/")
+	var pathParams map[string]string
+	segs := strings.Split(pathTrimed, "/")
 	for _, seg := range segs {
 		if child, ok := root.childOf(seg); ok {
 			root = child
+			if root.typ == nodeTypeParam {
+				if pathParams == nil {
+					pathParams = make(map[string]string)
+				}
+				pathParams[root.path[1:]] = seg
+			}
+
 		} else if root.starChild != nil {
 			root = root.starChild
 		} else {
@@ -92,7 +101,8 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 		}
 	}
 	return &matchInfo{
-		n: root,
+		n:          root,
+		pathParams: pathParams,
 	}, true
 }
 
@@ -142,13 +152,22 @@ type node struct {
 // 第一个返回值 *node 是命中的节点
 // 第二个返回值 bool 代表是否命中
 func (n *node) childOf(path string) (*node, bool) {
-	if n.children == nil {
+	findNonStaticMatch := func() (*node, bool) {
+		if n.paramChild != nil {
+			return n.paramChild, true
+		}
 		if n.starChild != nil {
 			return n.starChild, true
 		}
 		return nil, false
 	}
+	if n.children == nil {
+		return findNonStaticMatch()
+	}
 	child, ok := n.children[path]
+	if !ok {
+		return findNonStaticMatch()
+	}
 	return child, ok
 }
 
@@ -158,7 +177,27 @@ func (n *node) childOf(path string) (*node, bool) {
 // 最后会从 children 里面查找，
 // 如果没有找到，那么会创建一个新的节点，并且保存在 node 里面
 func (n *node) childOrCreate(path string) *node {
+	if path[0] == ':' {
+		if n.starChild != nil {
+			panic(fmt.Sprintf("web: wildcard path is defined. only one of path parameter and wildcard can be defined [%s]", path))
+		}
+		//if n.paramChild != nil && n.paramChild.path != path {
+		//	panic(fmt.Sprintf("web: duplicated define for path parameter [%s]", path))
+		//}
+		//n.paramChild = &node{path: path, typ: nodeTypeParam}
+		if n.paramChild != nil {
+			if n.paramChild.path != path {
+				panic(fmt.Sprintf("web: duplicated define for path parameter [%s]", path))
+			}
+		} else {
+			n.paramChild = &node{path: path, typ: nodeTypeParam}
+		}
+		return n.paramChild
+	}
 	if path == "*" {
+		if n.paramChild != nil {
+			panic(fmt.Sprintf("web: path parameter is defined. only one of path parameter and wildcard can be defined [%s]", path))
+		}
 		if n.starChild == nil {
 			n.starChild = &node{path: "*", typ: nodeTypeAny}
 		}
