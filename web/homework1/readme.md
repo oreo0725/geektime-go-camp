@@ -1,5 +1,8 @@
 # Web framework #homework1
 
+## Requirement
+- doc: https://doc.weixin.qq.com/doc/w3_ANUAjgZQAKoUwALoaDWSj2d1fxTw2?scode=ACQADQdwAAoVBqEH60
+
 ## TODO
 - [x] `required` wildcard 比對  
 - [x] `required` 正規表達式
