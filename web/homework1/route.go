@@ -158,25 +158,29 @@ type node struct {
 	regExpr  *regexp.Regexp
 }
 
+func (n *node) getNonStaticChild() (*node, bool) {
+	if n.regChild != nil {
+		return n.regChild, true
+	}
+	if n.paramChild != nil {
+		return n.paramChild, true
+	}
+	if n.starChild != nil {
+		return n.starChild, true
+	}
+	return nil, false
+}
+
 // child 返回子节点
 // 第一个返回值 *node 是命中的节点
 // 第二个返回值 bool 代表是否命中
 func (n *node) childOf(path string) (*node, bool) {
-	findNonStaticMatch := func() (*node, bool) {
-		if n.paramChild != nil {
-			return n.paramChild, true
-		}
-		if n.starChild != nil {
-			return n.starChild, true
-		}
-		return nil, false
-	}
 	if n.children == nil {
-		return findNonStaticMatch()
+		return n.getNonStaticChild()
 	}
 	child, ok := n.children[path]
 	if !ok {
-		return findNonStaticMatch()
+		return n.getNonStaticChild()
 	}
 	return child, ok
 }
