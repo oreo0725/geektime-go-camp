@@ -102,24 +102,20 @@ func (r *router) findMdls(root *node, segs []string) []Middleware {
 	mws := make([]Middleware, 0)
 	queue := []*node{root}
 	for _, s := range segs {
-		if len(queue) == 0 {
-			break
-		}
 		next := make([]*node, 0)
 		for len(queue) > 0 {
 			var first *node
 			first, queue = queue[0], queue[1:]
 			childrenNodes := first.childrenOf(s)
-			if len(childrenNodes) > 0 {
-				next = append(next, childrenNodes...)
-			}
+			next = append(next, childrenNodes...)
+			// append middleware of current node
 			if len(first.mdls) > 0 {
 				mws = append(mws, first.mdls...)
 			}
 		}
 		queue = next
-
 	}
+	// at last, append middlewares of all children nodes
 	for _, n := range queue {
 		if len(n.mdls) > 0 {
 			mws = append(mws, n.mdls...)
