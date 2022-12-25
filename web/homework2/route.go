@@ -90,7 +90,7 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 			return nil, false
 		}
 		if matchParam {
-			mi.addValue(root.path[1:], s)
+			mi.addValue(cur.path[1:], s)
 		}
 	}
 	mi.n = cur
