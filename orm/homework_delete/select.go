@@ -1,15 +1,12 @@
 package homework_delete
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
 )
 
 // Selector 用于构造 SELECT 语句
 type Selector[T any] struct {
-	sb    strings.Builder
-	args  []any
+	whereBuilder
 	table string
 	where []Predicate
 }
@@ -48,50 +45,6 @@ func (s *Selector[T]) Build() (*Query, error) {
 		SQL:  s.sb.String(),
 		Args: s.args,
 	}, nil
-}
-
-func (s *Selector[T]) buildExpression(e Expression) error {
-	if e == nil {
-		return nil
-	}
-	switch exp := e.(type) {
-	case Column:
-		s.sb.WriteByte('`')
-		s.sb.WriteString(exp.name)
-		s.sb.WriteByte('`')
-	case value:
-		s.sb.WriteByte('?')
-		s.args = append(s.args, exp.val)
-	case Predicate:
-		_, lp := exp.left.(Predicate)
-		if lp {
-			s.sb.WriteByte('(')
-		}
-		if err := s.buildExpression(exp.left); err != nil {
-			return err
-		}
-		if lp {
-			s.sb.WriteByte(')')
-		}
-
-		s.sb.WriteByte(' ')
-		s.sb.WriteString(exp.op.String())
-		s.sb.WriteByte(' ')
-
-		_, rp := exp.right.(Predicate)
-		if rp {
-			s.sb.WriteByte('(')
-		}
-		if err := s.buildExpression(exp.right); err != nil {
-			return err
-		}
-		if rp {
-			s.sb.WriteByte(')')
-		}
-	default:
-		return fmt.Errorf("orm: 不支持的表达式 %v", exp)
-	}
-	return nil
 }
 
 // Where 用于构造 WHERE 查询条件。如果 ps 长度为 0，那么不会构造 WHERE 部分

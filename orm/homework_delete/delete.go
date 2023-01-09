@@ -1,14 +1,11 @@
 package homework_delete
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
 )
 
 type Deleter[T any] struct {
-	sb    strings.Builder
-	args  []any
+	whereBuilder
 	table string
 	where []Predicate
 }
@@ -40,50 +37,6 @@ func (d *Deleter[T]) Build() (*Query, error) {
 		SQL:  d.sb.String(),
 		Args: d.args,
 	}, nil
-}
-
-func (d *Deleter[T]) buildExpression(e Expression) error {
-	if e == nil {
-		return nil
-	}
-	switch exp := e.(type) {
-	case Column:
-		d.sb.WriteByte('`')
-		d.sb.WriteString(exp.name)
-		d.sb.WriteByte('`')
-	case value:
-		d.sb.WriteByte('?')
-		d.args = append(d.args, exp.val)
-	case Predicate:
-		_, lp := exp.left.(Predicate)
-		if lp {
-			d.sb.WriteByte('(')
-		}
-		if err := d.buildExpression(exp.left); err != nil {
-			return err
-		}
-		if lp {
-			d.sb.WriteByte(')')
-		}
-
-		d.sb.WriteByte(' ')
-		d.sb.WriteString(exp.op.String())
-		d.sb.WriteByte(' ')
-
-		_, rp := exp.right.(Predicate)
-		if rp {
-			d.sb.WriteByte('(')
-		}
-		if err := d.buildExpression(exp.right); err != nil {
-			return err
-		}
-		if rp {
-			d.sb.WriteByte(')')
-		}
-	default:
-		return fmt.Errorf("orm: unsupported expression %v", exp)
-	}
-	return nil
 }
 
 // From accepts model definition
