@@ -36,6 +36,18 @@ func TestDeleter_Build(t *testing.T) {
 				Args: []any{16},
 			},
 		},
+		{
+			name: "multi where clauses",
+			builder: (&Deleter[TestModel]{}).
+				Where(
+					C("enabled").EQ(true).And(
+						C("sex").EQ("male").
+							Or(C("age").GT(22)))),
+			wantQuery: &Query{
+				SQL:  "DELETE FROM `TestModel` WHERE (`enabled` = ?) AND ((`sex` = ?) OR (`age` > ?));",
+				Args: []any{true, "male", 22},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
