@@ -3,6 +3,8 @@ module github.com/oreo0725/geektime-go-camp
 go 1.19
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/gotomicro/ekit v0.0.6
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/prometheus/client_golang v1.14.0
 	github.com/stretchr/testify v1.8.1
