@@ -52,28 +52,39 @@ func (s *Selector[T]) Build() (*Query, error) {
 			if i > 0 {
 				s.sb.WriteByte(',')
 			}
-			s.sb.WriteByte('`')
 
 			switch typ := col.(type) {
 			case Column:
-				s.sb.WriteString(typ.name)
+				fd, ok := s.model.FieldMap[typ.name]
+				if !ok {
+					return nil, errs.NewErrUnknownField(typ.name)
+				}
+				s.sb.WriteByte('`')
+				s.sb.WriteString(fd.ColName)
+				s.sb.WriteByte('`')
 				if typ.alias != "" {
-					s.sb.WriteString(` AS `)
+					s.sb.WriteString(" AS `")
 					s.sb.WriteString(typ.alias)
+					s.sb.WriteByte('`')
 				}
 			case Aggregate:
+				fd, ok := s.model.FieldMap[typ.arg]
+				if !ok {
+					return nil, errs.NewErrUnknownField(typ.arg)
+				}
 				s.sb.WriteString(typ.fn)
-				s.sb.WriteByte('(')
-				s.sb.WriteString(typ.arg)
-				s.sb.WriteByte(')')
+				s.sb.WriteString("(`")
+				s.sb.WriteString(fd.ColName)
+				s.sb.WriteString("`)")
 				if typ.alias != "" {
-					s.sb.WriteString(` AS `)
+					s.sb.WriteString(" AS `")
 					s.sb.WriteString(typ.alias)
+					s.sb.WriteByte('`')
 				}
 			case RawExpr:
 				s.sb.WriteString(typ.raw)
 			}
-			s.sb.WriteByte('`')
+
 		}
 	}
 
