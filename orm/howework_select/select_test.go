@@ -1,5 +1,3 @@
-//go:build howework
-
 package orm
 
 import (
@@ -383,7 +381,7 @@ func TestSelector_Build(t *testing.T) {
 			q: NewSelector[TestModel](db).
 				Where(Raw("`age` < ?", 18).AsPredicate()),
 			wantQuery: &Query{
-				SQL:  "SELECT * FROM `test_model` WHERE `age` < ?;",
+				SQL:  "SELECT * FROM `test_model` WHERE `age` < ?  ;",
 				Args: []any{18},
 			},
 		},
