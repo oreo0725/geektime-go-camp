@@ -110,6 +110,21 @@ func (s *Selector[T]) Build() (*Query, error) {
 	}
 
 	// group by
+	if len(s.groupBy) > 0 {
+		s.sb.WriteString(` GROUP BY `)
+		for i, col := range s.groupBy {
+			fd, ok := s.model.FieldMap[col.name]
+			if !ok {
+				return nil, errs.NewErrUnknownField(col.name)
+			}
+			if i > 0 {
+				s.sb.WriteByte(',')
+			}
+			s.sb.WriteByte('`')
+			s.sb.WriteString(fd.ColName)
+			s.sb.WriteByte('`')
+		}
+	}
 
 	// order by
 	if len(s.orderBys) > 0 {
