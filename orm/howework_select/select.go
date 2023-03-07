@@ -126,6 +126,18 @@ func (s *Selector[T]) Build() (*Query, error) {
 		}
 	}
 
+	// having
+	if len(s.having) > 0 {
+		s.sb.WriteString(` HAVING `)
+		p := s.having[0]
+		for i := 1; i < len(s.having); i++ {
+			p = p.And(s.having[i])
+		}
+		if err := s.buildWhereExpr(p); err != nil {
+			return nil, err
+		}
+	}
+
 	// order by
 	if len(s.orderBys) > 0 {
 		s.sb.WriteString(` ORDER BY `)
@@ -266,6 +278,15 @@ func (s *Selector[T]) buildWhereExpr(e Expression) error {
 	case RawExpr:
 		s.sb.WriteString(exp.raw)
 		s.args = append(s.args, exp.args...)
+	case Aggregate:
+		fd, ok := s.model.FieldMap[exp.arg]
+		if !ok {
+			return errs.NewErrUnknownField(exp.arg)
+		}
+		s.sb.WriteString(exp.fn)
+		s.sb.WriteString("(`")
+		s.sb.WriteString(fd.ColName)
+		s.sb.WriteString("`)")
 	default:
 		return fmt.Errorf("orm: unsupported expression %v", exp)
 	}
