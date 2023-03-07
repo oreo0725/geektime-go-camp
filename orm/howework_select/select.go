@@ -129,6 +129,17 @@ func (s *Selector[T]) Build() (*Query, error) {
 		}
 	}
 
+	// limit
+	if s.limit > 0 {
+		s.sb.WriteString(" LIMIT ?")
+		s.args = append(s.args, s.limit)
+	}
+	// offset
+	if s.offset > 0 {
+		s.sb.WriteString(" OFFSET ?")
+		s.args = append(s.args, s.offset)
+	}
+
 	s.sb.WriteByte(';')
 	return &Query{
 		SQL:  s.sb.String(),
