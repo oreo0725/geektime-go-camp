@@ -104,11 +104,15 @@ func (s *Selector[T]) Build() (*Query, error) {
 	if len(s.orderBys) > 0 {
 		s.sb.WriteString(` ORDER BY `)
 		for i, ob := range s.orderBys {
+			fd, ok := s.model.FieldMap[ob.col]
+			if !ok {
+				return nil, errs.NewErrUnknownField(ob.col)
+			}
 			if i > 0 {
 				s.sb.WriteByte(',')
 			}
 			s.sb.WriteByte('`')
-			s.sb.WriteString(ob.col)
+			s.sb.WriteString(fd.ColName)
 			s.sb.WriteString("` ")
 			s.sb.WriteString(ob.order)
 		}
