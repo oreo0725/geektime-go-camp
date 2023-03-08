@@ -55,31 +55,18 @@ func (s *Selector[T]) Build() (*Query, error) {
 
 			switch typ := col.(type) {
 			case Column:
-				fd, ok := s.model.FieldMap[typ.name]
-				if !ok {
-					return nil, errs.NewErrUnknownField(typ.name)
+				if err := s.buildColumn(typ); err != nil {
+					return nil, err
 				}
-				s.sb.WriteByte('`')
-				s.sb.WriteString(fd.ColName)
-				s.sb.WriteByte('`')
 				if typ.alias != "" {
-					s.sb.WriteString(" AS `")
-					s.sb.WriteString(typ.alias)
-					s.sb.WriteByte('`')
+					s.buildAlias(typ.alias)
 				}
 			case Aggregate:
-				fd, ok := s.model.FieldMap[typ.arg]
-				if !ok {
-					return nil, errs.NewErrUnknownField(typ.arg)
+				if err := s.buildAggregate(typ); err != nil {
+					return nil, err
 				}
-				s.sb.WriteString(typ.fn)
-				s.sb.WriteString("(`")
-				s.sb.WriteString(fd.ColName)
-				s.sb.WriteString("`)")
 				if typ.alias != "" {
-					s.sb.WriteString(" AS `")
-					s.sb.WriteString(typ.alias)
-					s.sb.WriteByte('`')
+					s.buildAlias(typ.alias)
 				}
 			case RawExpr:
 				s.sb.WriteString(typ.raw)
@@ -174,6 +161,12 @@ func (s *Selector[T]) Build() (*Query, error) {
 	}, nil
 }
 
+func (s *Selector[T]) buildAlias(a string) {
+	s.sb.WriteString(" AS `")
+	s.sb.WriteString(a)
+	s.sb.WriteByte('`')
+}
+
 // Where 用于构造 WHERE 查询条件。如果 ps 长度为 0，那么不会构造 WHERE 部分
 func (s *Selector[T]) Where(ps ...Predicate) *Selector[T] {
 	s.where = ps
@@ -239,13 +232,9 @@ func (s *Selector[T]) buildWhereExpr(e Expression) error {
 	}
 	switch exp := e.(type) {
 	case Column:
-		fd, ok := s.model.FieldMap[exp.name]
-		if !ok {
-			return errs.NewErrUnknownField(exp.name)
+		if err := s.buildColumn(exp); err != nil {
+			return err
 		}
-		s.sb.WriteByte('`')
-		s.sb.WriteString(fd.ColName)
-		s.sb.WriteByte('`')
 	case value:
 		s.sb.WriteByte('?')
 		s.args = append(s.args, exp.val)
@@ -279,16 +268,34 @@ func (s *Selector[T]) buildWhereExpr(e Expression) error {
 		s.sb.WriteString(exp.raw)
 		s.args = append(s.args, exp.args...)
 	case Aggregate:
-		fd, ok := s.model.FieldMap[exp.arg]
-		if !ok {
-			return errs.NewErrUnknownField(exp.arg)
+		if err := s.buildAggregate(exp); err != nil {
+			return err
 		}
-		s.sb.WriteString(exp.fn)
-		s.sb.WriteString("(`")
-		s.sb.WriteString(fd.ColName)
-		s.sb.WriteString("`)")
 	default:
 		return fmt.Errorf("orm: unsupported expression %v", exp)
 	}
+	return nil
+}
+
+func (s *Selector[T]) buildColumn(col Column) error {
+	fd, ok := s.model.FieldMap[col.name]
+	if !ok {
+		return errs.NewErrUnknownField(col.name)
+	}
+	s.sb.WriteByte('`')
+	s.sb.WriteString(fd.ColName)
+	s.sb.WriteByte('`')
+	return nil
+}
+
+func (s *Selector[T]) buildAggregate(exp Aggregate) error {
+	fd, ok := s.model.FieldMap[exp.arg]
+	if !ok {
+		return errs.NewErrUnknownField(exp.arg)
+	}
+	s.sb.WriteString(exp.fn)
+	s.sb.WriteString("(`")
+	s.sb.WriteString(fd.ColName)
+	s.sb.WriteString("`)")
 	return nil
 }
